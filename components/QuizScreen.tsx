@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { ChevronLeft } from "lucide-react";
 import { QUESTIONS } from "@/lib/questions";
 import { QuestionOption, StoredAnswer } from "@/types";
 
@@ -11,29 +12,46 @@ interface QuizScreenProps {
 
 export default function QuizScreen({ onComplete }: QuizScreenProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [answers, setAnswers] = useState<StoredAnswer[]>([]);
+  // 질문 순서에 맞춰 인덱스로 저장한다. 뒤로 가서 답을 바꿔도 이후 질문의
+  // 답변은 그대로 유지되고, 해당 인덱스만 덮어쓴다.
+  const [answers, setAnswers] = useState<(StoredAnswer | null)[]>(
+    () => Array(QUESTIONS.length).fill(null)
+  );
 
   const question = QUESTIONS[currentIndex];
   const progress = ((currentIndex + 1) / QUESTIONS.length) * 100;
+  const selectedOptionId = answers[currentIndex]?.optionId;
 
   function handleSelect(option: QuestionOption) {
-    const nextAnswers: StoredAnswer[] = [
-      ...answers,
-      { questionId: question.id, optionId: option.id },
-    ];
+    const nextAnswers = [...answers];
+    nextAnswers[currentIndex] = { questionId: question.id, optionId: option.id };
+    setAnswers(nextAnswers);
 
     if (currentIndex + 1 < QUESTIONS.length) {
-      setAnswers(nextAnswers);
       setCurrentIndex((prev) => prev + 1);
     } else {
-      onComplete(nextAnswers);
+      onComplete(nextAnswers as StoredAnswer[]);
     }
+  }
+
+  function handleBack() {
+    if (currentIndex === 0) return;
+    setCurrentIndex((prev) => prev - 1);
   }
 
   return (
     <div className="flex w-full max-w-md flex-col gap-8">
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between text-sm font-semibold text-slate-400">
+          <button
+            type="button"
+            onClick={handleBack}
+            disabled={currentIndex === 0}
+            className="flex items-center gap-1 rounded-full px-2 py-1 text-slate-400 transition-colors enabled:hover:bg-white/5 enabled:hover:text-amber-300 disabled:opacity-0"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            이전
+          </button>
           <span className="text-amber-300">
             [ {currentIndex + 1} / {QUESTIONS.length} ]
           </span>
@@ -63,20 +81,33 @@ export default function QuizScreen({ onComplete }: QuizScreenProps) {
           </p>
 
           <div className="flex flex-col gap-3">
-            {question.options.map((option, index) => (
-              <motion.button
-                key={option.id}
-                onClick={() => handleSelect(option)}
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.98 }}
-                className="rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-left text-sm font-medium leading-relaxed text-slate-100 shadow-lg backdrop-blur-sm transition-all hover:border-amber-400/50 hover:bg-amber-500/10 sm:text-base"
-              >
-                <span className="mr-2 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-500/20 text-xs font-bold text-amber-300 align-middle">
-                  {index + 1}
-                </span>
-                {option.text}
-              </motion.button>
-            ))}
+            {question.options.map((option, index) => {
+              const isSelected = option.id === selectedOptionId;
+              return (
+                <motion.button
+                  key={option.id}
+                  onClick={() => handleSelect(option)}
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.98 }}
+                  className={`rounded-2xl border px-5 py-4 text-left text-sm font-medium leading-relaxed shadow-lg backdrop-blur-sm transition-all sm:text-base ${
+                    isSelected
+                      ? "border-amber-400/70 bg-amber-500/15 text-white ring-1 ring-inset ring-amber-400/40"
+                      : "border-white/10 bg-white/5 text-slate-100 hover:border-amber-400/50 hover:bg-amber-500/10"
+                  }`}
+                >
+                  <span
+                    className={`mr-2 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full align-middle text-xs font-bold ${
+                      isSelected
+                        ? "bg-amber-400 text-[#0f0a06]"
+                        : "bg-amber-500/20 text-amber-300"
+                    }`}
+                  >
+                    {index + 1}
+                  </span>
+                  {option.text}
+                </motion.button>
+              );
+            })}
           </div>
         </motion.div>
       </AnimatePresence>
