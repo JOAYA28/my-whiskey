@@ -133,7 +133,7 @@ function findDominantAxis(userVector: FlavorVector): FlavorAxis | null {
   return null;
 }
 
-// Step 3. 보정 필터 적용 (경험수준/서빙방식/도수선호 + 압도적 취향 보너스)
+// Step 3. 보정 필터 적용 (경험수준/서빙방식 + 압도적 취향 보너스)
 function applyAdjustments(
   baseDistance: number,
   whisky: Whisky,
@@ -149,12 +149,6 @@ function applyAdjustments(
     distance -= 1.0;
   }
   if (meta.serving === "스트레이트" && whisky.flavor.body >= 3) {
-    distance -= 0.5;
-  }
-  if (meta.abvPreference === "낮음" && whisky.abv >= 46) {
-    distance += 0.5;
-  }
-  if (meta.abvPreference === "높음" && whisky.abv >= 45) {
     distance -= 0.5;
   }
   if (meta.budget === "가성비" && whisky.priceTier === "프리미엄") {

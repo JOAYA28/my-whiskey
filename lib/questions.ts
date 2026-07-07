@@ -2,7 +2,7 @@ import { Question } from "@/types";
 
 // PRD docs/PRD.md 5. 질문 설계 참고.
 // Q1~Q11: 향미 축(A~G) 점수를 쌓는 핵심 매칭 질문
-// Q12~Q14: 경험수준/서빙방식/도수선호 보정 질문
+// Q12~Q13: 경험수준/서빙방식 보정 질문
 export const QUESTIONS: Question[] = [
   {
     id: 1,
@@ -156,16 +156,6 @@ export const QUESTIONS: Question[] = [
       { id: "q13-2", text: "온더락(얼음만 넣어서)", meta: { serving: "온더락" } },
       { id: "q13-3", text: "스트레이트(니트)로 향과 맛을 그대로", meta: { serving: "스트레이트" } },
       { id: "q13-4", text: "아직 잘 모르겠다, 추천해달라", meta: { serving: "미정" } },
-    ],
-  },
-  {
-    id: 14,
-    category: "meta",
-    text: "도수(알코올 강도)에 대한 나의 선호는?",
-    options: [
-      { id: "q14-1", text: "낮을수록 편하게 마시기 좋다 (40% 내외)", meta: { abvPreference: "낮음" } },
-      { id: "q14-2", text: "표준적인 도수면 충분하다 (40~43%)", meta: { abvPreference: "보통" } },
-      { id: "q14-3", text: "알코올이 확실히 느껴지는 편이 좋다 (43%↑)", meta: { abvPreference: "높음" } },
     ],
   },
 ];
