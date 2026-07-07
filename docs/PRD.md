@@ -1,0 +1,559 @@
+# PRD: 내 입맛에 맞는 위스키 (Whisky Flavor Match)
+
+| 항목 | 내용 |
+| --- | --- |
+| 문서 버전 | v1.0 |
+| 작성일 | 2026-07-07 |
+| 작성자 | PM |
+| 상태 | 개발 착수용 확정안 |
+| 관련 스택 | Next.js 15 (App Router) / React 19 / Tailwind CSS / Supabase / Framer Motion |
+
+---
+
+## 1. 서비스 개요
+
+### 1-1. 서비스명
+**내 취향 한 잔, 위스키 편 (Whisky Flavor Match)**
+
+### 1-2. 한 줄 소개
+몇 가지 취향 질문에 답하면, 실제 위스키 향미 데이터를 기반으로 나에게 맞는 위스키를 추천해주는 웹 서비스.
+
+### 1-3. 서비스 목표
+- 위스키 지식이 전혀 없는 입문자도 **평균 3분 이내**에 자신의 취향에 맞는 위스키를 찾을 수 있도록 한다.
+- "재미로 보는 성격 테스트"가 아니라 **실제 위스키 테이스팅 노트(피트/스모키, 셰리, 과일향, 바닐라, 스파이스, 바디감, 도수)에 기반한 논리적 매칭**을 제공한다.
+- 결과에 추천 이유, 향미 프로파일, 안주, 비슷한 위스키까지 제공해 사용자가 스스로 "왜 이 위스키인지"를 이해하게 한다.
+
+### 1-4. 타겟 사용자
+- 20~40대, 위스키 입문자("위린이")
+- 하이볼을 즐기다가 위스키 자체에 관심이 생긴 사용자
+- 바/편의점/마트에서 위스키를 고를 때 무엇을 골라야 할지 모르는 사용자
+- 위스키 용어(피트, 캐스크, 숙성연수 등)에 익숙하지 않은 사용자
+
+### 1-5. 핵심 가치
+| 가치 | 설명 |
+| --- | --- |
+| 쉬움 | 전문 용어 없이 일상적인 취향(디저트, 커피, 캠핑 등)으로 질문 |
+| 신뢰성 | 실제 위스키 향미 데이터 기반의 벡터 매칭 알고리즘 (감성적 재미 요소 아님) |
+| 즉시성 | 회원가입/로그인 없이 즉시 테스트 → 즉시 결과 |
+| 실용성 | 추천 이유, 안주, 가격대, 입문 난이도까지 실행 가능한 정보 제공 |
+
+---
+
+## 2. 사용자 플로우 (User Flow)
+
+```mermaid
+flowchart TD
+    A[Home 진입] --> B[테스트 시작 버튼 클릭]
+    B --> C["Q1 ~ Q15 순차 응답 (프로그레스 바 노출)"]
+    C --> D{모든 질문 응답 완료?}
+    D -- No, 이전 질문으로 --> C
+    D -- Yes --> E[결과 계산 로딩 애니메이션]
+    E --> F[Supabase에 응답/결과 저장]
+    F --> G[추천 결과 화면 노출]
+    G --> H{다음 행동 선택}
+    H -- 다시 테스트하기 --> B
+    H -- 결과 공유하기 --> I[링크 복사 / 카카오톡 공유]
+    H -- 비슷한 위스키 더보기 --> G
+```
+
+**단계별 설명**
+
+1. **Home**: 서비스 소개 + 누적 참여자 수 배너 + "테스트 시작" CTA
+2. **테스트 시작**: Quiz 화면으로 라우팅, 1번 질문부터 시작
+3. **질문 응답 (15문항)**: 한 화면에 1문항씩, 선택 즉시 다음 질문으로 자동 전환
+4. **결과 계산**: 클라이언트에서 점수 합산 → 서버(API)에서 매칭 알고리즘 실행
+5. **결과 저장**: 익명 세션으로 Supabase `quiz_results` 테이블에 기록 (통계/카운터용)
+6. **추천 결과**: 1위 위스키 상세 정보 + 비슷한 위스키 2종 노출
+7. **다시 테스트 / 공유**: 재시작 또는 결과 링크 공유로 종료
+
+---
+
+## 3. IA (Information Architecture)
+
+```
+내 입맛에 맞는 위스키
+│
+├── Home (/)
+│   ├── 서비스 소개 섹션
+│   ├── 누적 참여자 수 배너
+│   └── [테스트 시작하기] 버튼
+│
+├── Quiz (/quiz)
+│   ├── 진행 상태 바 (n/15)
+│   ├── 질문 텍스트
+│   ├── 선택지 (2~4개)
+│   └── [이전 질문] 이동 (선택적 UI)
+│
+├── Loading (Quiz → Result 전환 시 오버레이, 별도 라우트 없음)
+│
+├── Result (/result/[resultId])
+│   ├── 추천 위스키 카드 (이미지, 이름, 매치율)
+│   ├── 추천 이유
+│   ├── 향미 프로파일 (레이더 차트)
+│   ├── 상세 정보 (도수/국가/가격대/입문난이도)
+│   ├── 추천 안주
+│   ├── 비슷한 위스키 리스트 (2종)
+│   ├── 한 줄 추천 문구
+│   └── [다시 테스트하기] / [결과 공유하기] 버튼
+│
+└── (공용) NotFound / Error 화면
+```
+
+> 결과는 `resultId`(Supabase `quiz_results.id`)를 URL에 포함해 공유 가능한 형태로 설계한다. (예: `/result/9f2a...`)
+
+---
+
+## 4. 화면별 기능 명세
+
+### 4-1. Home (`/`)
+
+**목적**: 서비스를 소개하고 테스트 시작을 유도한다.
+
+| 구분 | 내용 |
+| --- | --- |
+| UI 구성요소 | 헤더(서비스명/로고), 히어로 카피, 서비스 설명 3~4줄, 누적 참여자 수 배너, 향미 축 아이콘(피트/스위트/프루티 등) 소개, CTA 버튼, 푸터 |
+| 버튼 | `[내 위스키 찾으러 가기 →]` (Primary CTA) |
+| 입력값 | 없음 |
+| 동작 | 1. 페이지 로드 시 `GET /api/stats/participants` 호출 → 배너에 누적 참여자 수 표시<br>2. CTA 클릭 시 `/quiz`로 라우팅, 클라이언트 상태(sessionStorage 등)에 새 퀴즈 세션 시작 |
+| 예외 처리 | 참여자 수 API 실패 시 배너는 숨기거나 기본 문구("많은 분들이 참여하고 있어요")로 대체, 에러로 CTA 동작을 막지 않음 |
+
+### 4-2. Quiz (`/quiz`)
+
+**목적**: 15개 질문에 순차 응답을 받아 사용자의 향미 취향 벡터를 수집한다.
+
+| 구분 | 내용 |
+| --- | --- |
+| UI 구성요소 | 상단 진행 바(`n/15`), 질문 텍스트(중앙 강조), 선택지 버튼(세로 배치, 2~4개), 하단 "이전 질문" 텍스트 링크(선택적) |
+| 버튼 | 선택지 버튼(선택 즉시 다음 질문 전환), `[이전으로]`(선택적, 답변 수정용) |
+| 입력값 | 각 질문당 선택지 1개 (단일 선택, radio 형태) |
+| 동작 | 1. 질문/선택지는 최초 진입 시 `GET /api/questions`로 로드(또는 정적 데이터, 4-3 DB 설계 참고)<br>2. 선택지 클릭 시 해당 답변을 로컬 상태(배열)에 저장하고 0.3초 트랜지션 후 다음 질문으로 이동<br>3. 마지막 질문(15번) 응답 시 로딩 오버레이 표시 → `POST /api/quiz/submit` 호출<br>4. 응답 성공 시 반환된 `resultId`로 `/result/[resultId]`로 이동 |
+| 예외 처리 | - 새로고침 시 진행 중이던 답변은 초기화(회원 시스템 없으므로 저장하지 않음, 진입 시 안내 없이 Q1부터 재시작)<br>- `POST /api/quiz/submit` 실패 시 "결과를 계산하지 못했어요, 다시 시도해주세요" 토스트 + 재시도 버튼<br>- 15문항 중 하나라도 누락된 상태로 제출 시도 시 클라이언트에서 차단(있을 수 없는 케이스지만 방어 코드 작성) |
+
+### 4-3. Result (`/result/[resultId]`)
+
+**목적**: 매칭된 위스키와 근거를 시각적으로 제공하고, 재시작/공유를 유도한다.
+
+| 구분 | 내용 |
+| --- | --- |
+| UI 구성요소 | 추천 위스키 카드(이미지, 이름, 국가, 매치율 %), 추천 이유 텍스트, 향미 프로파일 레이더 차트(7축), 상세 정보 표(도수/타입/가격대/입문난이도), 추천 안주 리스트, 비슷한 위스키 카드 2개, 한 줄 추천 문구 |
+| 버튼 | `[테스트 다시하기]`, `[결과 링크 복사]`, (선택) `[카카오톡 공유]` |
+| 입력값 | 없음 (URL 파라미터 `resultId`로 데이터 조회) |
+| 동작 | 1. 진입 시 `GET /api/quiz/result/[resultId]` 호출 → 저장된 답변/추천 결과 조회<br>2. 데이터 바탕으로 카드/차트/표 렌더링<br>3. `[다시하기]` 클릭 시 `/quiz`로 이동, 세션 초기화<br>4. `[결과 링크 복사]` 클릭 시 현재 URL을 클립보드에 복사 + 토스트 노출 |
+| 예외 처리 | - 존재하지 않는 `resultId`(잘못된 링크, 삭제된 데이터) 접근 시 "결과를 찾을 수 없어요" 안내 화면 + `[테스트 시작하기]` 버튼으로 유도<br>- API 실패 시 재조회 버튼 노출 |
+
+---
+
+## 5. 질문 설계
+
+실제 위스키 테이스팅 노트에서 자주 쓰이는 향미 축을 **7가지**로 정의하고, 사용자가 이해하기 쉬운 일상 취향(디저트, 커피, 캠핑, 음료 등)으로 질문을 구성한다. 여기에 **서빙 방식/경험 수준/예산**을 묻는 보정 질문 3개를 더해 총 **15문항**으로 설계한다.
+
+### 5-1. 향미 축(Flavor Axis) 정의
+
+| 코드 | 축 이름 | 설명 | 대표 표현 |
+| --- | --- | --- | --- |
+| A | Peat & Smoke (피트/스모키) | 훈연향, 소독약/약품향, 탄향 | 훈제, 장작불, 캠프파이어 |
+| B | Sweetness (단맛) | 캐러멜, 허니, 설탕 | 케이크, 시럽, 사이다 |
+| C | Fruitiness (과일향) | 상큼한 과일 ~ 시트러스 | 사과, 배, 오렌지, 레몬 |
+| D | Sherry & Richness (셰리/리치) | 건과일, 다크초콜릿, 넛티 | 건포도, 초콜릿, 견과류 |
+| E | Vanilla & Cream (바닐라/크림) | 바닐라, 버터, 크림 | 바닐라아이스크림, 카라멜 |
+| F | Spice (스파이스) | 시나몬, 후추, 생강 | 수정과, 애플파이, 매운맛 |
+| G | Body & Weight (바디감) | 가벼움 ~ 무거움, 질감 | 연한 커피 ~ 진한 에스프레소 |
+
+### 5-2. 질문 & 선택지 & 점수 매핑
+
+> 모든 점수는 해당 선택지를 고를 때 **가산**되는 향미 축 점수다. 하단 6번(추천 알고리즘)에서 정규화 방식을 설명한다.
+
+| # | 질문 | 선택지 | 점수 |
+| --- | --- | --- | --- |
+| Q1 | 훈제 베이컨, 훈제오리, 스모크 치즈 같은 훈연 요리를 먹을 때 나는? | ① 향만 맡아도 설렌다, 진할수록 좋다 | A+3 |
+| | | ② 적당히 스모키한 정도가 맛있다 | A+2 |
+| | | ③ 향이 약하면 괜찮다 | A+1 |
+| | | ④ 훈연향보다 깔끔한 재료 맛이 좋다 | A+0 |
+| Q2 | 캠핑장에서 장작불 냄새가 옷에 배는 것에 대한 생각은? | ① 그 냄새가 좋아서 불 옆에 계속 앉아있는다 | A+3 |
+| | | ② 은은하게 남는 정도는 낭만있다 | A+2 |
+| | | ③ 신경 쓰지 않는다 | A+1 |
+| | | ④ 냄새가 빠질 때까지 옷을 따로 세탁한다 | A+0 |
+| Q3 | 케이크, 마카롱 같은 달콤한 디저트를 얼마나 좋아하나요? | ① 디저트는 무조건 달아야 한다 | B+3 |
+| | | ② 적당히 단 편이 좋다 | B+2 |
+| | | ③ 너무 달지 않은 게 좋다 | B+1 |
+| | | ④ 단맛보다 다른 맛이 중요하다 | B+0 |
+| Q4 | 탄산음료 중 나의 취향은? | ① 콜라, 사이다처럼 확실히 단 음료 | B+3 |
+| | | ② 과일맛 탄산음료(오렌지, 포도 등) | B+2 |
+| | | ③ 제로 콜라처럼 단맛은 약한 음료 | B+1 |
+| | | ④ 토닉워터, 탄산수처럼 씁쓸/드라이한 음료 | B+0 |
+| Q5 | 가장 좋아하는 과일 스타일은? | ① 오렌지, 자몽, 레몬 같은 상큼한 시트러스 | C+3 |
+| | | ② 사과, 배처럼 은은하게 단 과일 | C+2 |
+| | | ③ 바나나, 복숭아처럼 부드럽고 달콤한 과일 | C+1 |
+| | | ④ 과일보다 초콜릿, 견과류 간식이 좋다 | C+0 |
+| Q6 | 하이볼이나 에이드에서 가장 기대하는 향은? | ① 레몬/라임 같은 상큼한 시트러스 향 | C+3 |
+| | | ② 복숭아, 사과 같은 과일 시럽 향 | C+2 |
+| | | ③ 은은한 과일향이면 충분하다 | C+1 |
+| | | ④ 과일향보다 탄산의 청량감이 중요하다 | C+0 |
+| Q7 | 다크초콜릿, 건포도, 말린 자두 같은 간식에 대한 취향은? | ① 진하고 묵직한 단맛, 최고로 좋아한다 | D+3 |
+| | | ② 가끔 즐긴다 | D+2 |
+| | | ③ 크게 좋아하지 않는다 | D+1 |
+| | | ④ 전혀 안 먹는다 | D+0 |
+| Q8 | 바닐라아이스크림, 카라멜 마키아토 같은 크리미한 단맛은 나에게? | ① 최애 디저트 스타일이다 | E+3 |
+| | | ② 종종 즐기는 편이다 | E+2 |
+| | | ③ 있으면 먹지만 찾진 않는다 | E+1 |
+| | | ④ 느끼해서 별로 안 좋아한다 | E+0 |
+| Q9 | 수정과, 애플파이처럼 시나몬/생강 향이 들어간 음식은? | ① 향이 강할수록 좋다 | F+3 |
+| | | ② 적당히 들어간 정도가 좋다 | F+2 |
+| | | ③ 향이 약하면 괜찮다 | F+1 |
+| | | ④ 향신료 향은 부담스럽다 | F+0 |
+| Q10 | 커피를 마신다면 나의 스타일은? | ① 진한 에스프레소, 콜드브루 | G+3 |
+| | | ② 아메리카노(기본 농도) | G+2 |
+| | | ③ 연하게 마시는 아메리카노 | G+1 |
+| | | ④ 커피보다 가벼운 차/음료를 선호 | G+0 |
+| Q11 | 평소 좋아하는 음식의 무게감은? | ① 스테이크, 갈비처럼 묵직하고 진한 음식 | G+3 |
+| | | ② 파스타, 찌개처럼 적당히 진한 음식 | G+2 |
+| | | ③ 샐러드, 담백한 흰살 요리처럼 가벼운 음식 | G+1 |
+| | | ④ 가볍고 산뜻한 음식을 항상 선호 | G+0 |
+| Q12 | 위스키(또는 하이볼)를 마셔본 경험은? | ① 위스키는 처음이에요 | 경험도=초급 |
+| | | ② 하이볼로만 마셔봤어요 | 경험도=초급 |
+| | | ③ 스트레이트/온더락으로 몇 번 마셔봤어요 | 경험도=중급 |
+| | | ④ 좋아하는 위스키가 이미 있어요 | 경험도=상급 |
+| Q13 | 위스키를 마신다면 어떤 방식이 가장 당길까요? | ① 하이볼(탄산+얼음)로 가볍게 | 서빙=하이볼 |
+| | | ② 온더락(얼음만 넣어서) | 서빙=온더락 |
+| | | ③ 스트레이트(니트)로 향과 맛을 그대로 | 서빙=스트레이트 |
+| | | ④ 아직 잘 모르겠다, 추천해달라 | 서빙=미정 |
+| Q14 | 위스키를 고를 때 선호하는 가격대는? | ① 3만원대 이하, 가성비가 중요해요 | 예산=가성비 |
+| | | ② 3~7만원대, 적당한 선에서 좋은 걸 원해요 | 예산=일반 |
+| | | ③ 7만원 이상도 괜찮아요, 맛이 우선이에요 | 예산=프리미엄 |
+| Q15 | 도수(알코올 강도)에 대한 나의 선호는? | ① 낮을수록 편하게 마시기 좋다 (40% 내외) | 도수선호=낮음 |
+| | | ② 표준적인 도수면 충분하다 (40~43%) | 도수선호=보통 |
+| | | ③ 알코올이 확실히 느껴지는 편이 좋다 (43%↑) | 도수선호=높음 |
+
+> Q1~Q11(11문항)은 7개 향미 축(A~G) 점수를 쌓는 **핵심 매칭 질문**이며, Q12~Q15(4문항)은 매칭 이후 **보정 필터**로 사용되는 **보조 질문**이다. 총 15문항.
+
+---
+
+## 6. 추천 알고리즘
+
+### 6-1. Step 1. 사용자 취향 벡터 정규화
+
+각 향미 축(A~G)의 **질문별 최대 점수 합**을 기준으로 0~5 스케일로 정규화하여, 위스키 DB의 향미 벡터(0~5)와 동일한 스케일로 맞춘다.
+
+| 축 | 관련 질문 | 축 최대 원점수 | 정규화 공식 |
+| --- | --- | --- | --- |
+| A (Peat) | Q1, Q2 | 6 | `A_norm = (Q1+Q2) / 6 * 5` |
+| B (Sweet) | Q3, Q4 | 6 | `B_norm = (Q3+Q4) / 6 * 5` |
+| C (Fruit) | Q5, Q6 | 6 | `C_norm = (Q5+Q6) / 6 * 5` |
+| D (Sherry) | Q7 | 3 | `D_norm = Q7 / 3 * 5` |
+| E (Vanilla) | Q8 | 3 | `E_norm = Q8 / 3 * 5` |
+| F (Spice) | Q9 | 3 | `F_norm = Q9 / 3 * 5` |
+| G (Body) | Q10, Q11 | 6 | `G_norm = (Q10+Q11) / 6 * 5` |
+
+결과: 사용자 벡터 `U = [A, B, C, D, E, F, G]` (각 0~5)
+
+### 6-2. Step 2. 위스키 벡터와의 거리 계산
+
+DB에 사전 정의된 위스키별 향미 벡터 `W = [A, B, C, D, E, F, G]`와 유클리드 거리를 계산한다.
+
+```
+distance(U, W) = sqrt( Σ (U_i - W_i)^2 )   for i in [A..G]
+```
+
+거리가 **작을수록** 취향이 가까운 위스키다. (7축 모두 0~5이므로 이론상 최대 거리 ≈ 13.2)
+
+### 6-3. Step 3. 보정 필터 적용 (Q12~Q15 반영)
+
+기본 거리값에 아래 규칙을 순서대로 적용해 최종 점수(`final_distance`)를 계산한다.
+
+| 조건 | 보정 | 이유 |
+| --- | --- | --- |
+| 경험도=초급 **이고** 위스키.난이도="도전" **이고** 사용자 A(피트) < 4 | `+2.0` (거리 증가 = 우선순위 하락) | 입문자에게 헤비 피트 위스키를 1순위로 주지 않기 위함 |
+| 서빙=하이볼 **이고** 위스키.하이볼적합=true | `-1.0` (거리 감소 = 우선순위 상승) | 하이볼 지향 사용자에게 믹서블한 위스키 우선 노출 |
+| 서빙=스트레이트 **이고** 위스키.G(바디) ≥ 3 | `-0.5` | 니트로 마시기에 존재감 있는 위스키 우선 |
+| 도수선호=낮음 **이고** 위스키.도수 ≥ 46% | `+0.5` | 고도수 회피 사용자 배려 |
+| 도수선호=높음 **이고** 위스키.도수 ≥ 45% | `-0.5` | 고도수 선호 사용자에게 강한 위스키 우선 |
+| 예산=가성비 **이고** 위스키.가격대="프리미엄" | `+0.5` | 예산 초과 위스키 우선순위 하락 |
+| 예산=프리미엄 | 보정 없음 | 가격 제약 없음 |
+
+### 6-4. Step 4. 최종 추천 및 매치율 산출
+
+1. 전체 위스키(30종)에 대해 `final_distance` 오름차순 정렬
+2. **1위 = 추천 위스키**, **2~3위 = 비슷한 위스키** (추천 위스키 제외)
+3. 매치율(%) 산출: `match_rate = round((1 - final_distance / MAX_DISTANCE) * 100)` (`MAX_DISTANCE` = 13.2 상수)
+
+### 6-5. 예시
+
+```
+사용자 벡터: Peat 1.0, Sweet 4.2, Fruit 3.5, Sherry 4.0, Vanilla 3.0, Spice 2.0, Body 2.5
+서빙=하이볼, 경험도=초급, 도수선호=보통, 예산=일반
+
+→ Macallan 12 Sherry Oak 벡터(Peat0, Sweet4, Fruit3, Sherry5, Vanilla2, Spice2, Body3)와 거리 최소
+→ 보정: 하이볼 적합 아님(보정 없음), 초급+도전난이도 아님(보정 없음)
+→ final_distance ≈ 1.8 → match_rate ≈ 86%
+→ 결과: "Macallan 12 Sherry Oak" 추천 (Sweet+Sherry 취향 강하게 반영)
+```
+
+### 6-6. 추천 위스키 DB (30종 향미 벡터)
+
+향미 점수는 0(거의 없음)~5(매우 강함) 스케일. `하이볼적합`은 라이트 바디/블렌디드 위스키 중심으로 true 처리.
+
+| 위스키 | 국가 | 타입 | 도수 | Peat | Sweet | Fruit | Sherry | Vanilla | Spice | Body | 난이도 | 가격대 | 하이볼적합 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Glenfiddich 12 | 스코틀랜드 | 싱글몰트 | 40% | 0 | 3 | 4 | 1 | 2 | 1 | 1 | 쉬움 | 일반 | true |
+| Glenlivet 12 | 스코틀랜드 | 싱글몰트 | 40% | 0 | 2 | 4 | 1 | 2 | 1 | 1 | 쉬움 | 일반 | true |
+| Glenmorangie Original 10 | 스코틀랜드 | 싱글몰트 | 40% | 0 | 2 | 4 | 1 | 3 | 1 | 1 | 쉬움 | 일반 | true |
+| Glenmorangie Lasanta | 스코틀랜드 | 싱글몰트 | 46% | 0 | 4 | 2 | 4 | 3 | 2 | 2 | 쉬움 | 일반 | false |
+| Macallan 12 Sherry Oak | 스코틀랜드 | 싱글몰트 | 40% | 0 | 4 | 3 | 5 | 2 | 2 | 3 | 쉬움 | 프리미엄 | false |
+| Balvenie 12 Doublewood | 스코틀랜드 | 싱글몰트 | 40% | 0 | 4 | 2 | 3 | 4 | 1 | 2 | 쉬움 | 일반 | false |
+| Aberlour 12 Double Cask | 스코틀랜드 | 싱글몰트 | 40% | 0 | 4 | 2 | 4 | 2 | 3 | 2 | 쉬움 | 일반 | false |
+| Dalmore 12 | 스코틀랜드 | 싱글몰트 | 40% | 0 | 4 | 3 | 5 | 2 | 2 | 3 | 중간 | 프리미엄 | false |
+| Highland Park 12 | 스코틀랜드 | 싱글몰트 | 40% | 2 | 3 | 2 | 2 | 2 | 2 | 2 | 중간 | 일반 | false |
+| Bowmore 12 | 스코틀랜드 | 싱글몰트 | 40% | 3 | 3 | 3 | 2 | 2 | 1 | 2 | 중간 | 일반 | false |
+| Talisker 10 | 스코틀랜드 | 싱글몰트 | 45.8% | 3 | 1 | 1 | 1 | 1 | 4 | 4 | 중간 | 일반 | false |
+| Ardbeg 10 | 스코틀랜드 | 싱글몰트 | 46% | 5 | 1 | 3 | 0 | 1 | 2 | 3 | 도전 | 일반 | false |
+| Laphroaig 10 | 스코틀랜드 | 싱글몰트 | 40% | 5 | 0 | 1 | 0 | 0 | 2 | 4 | 도전 | 일반 | false |
+| Lagavulin 16 | 스코틀랜드 | 싱글몰트 | 43% | 5 | 2 | 1 | 3 | 1 | 2 | 4 | 도전 | 프리미엄 | false |
+| Monkey Shoulder | 스코틀랜드 | 블렌디드몰트 | 40% | 0 | 3 | 3 | 1 | 2 | 1 | 1 | 쉬움 | 가성비 | true |
+| Johnnie Walker Black | 스코틀랜드 | 블렌디드 | 40% | 2 | 3 | 2 | 2 | 2 | 2 | 2 | 쉬움 | 가성비 | true |
+| Chivas Regal 12 | 스코틀랜드 | 블렌디드 | 40% | 0 | 3 | 3 | 2 | 2 | 1 | 1 | 쉬움 | 가성비 | true |
+| Jameson | 아일랜드 | 블렌디드 | 40% | 0 | 2 | 3 | 1 | 2 | 1 | 1 | 쉬움 | 가성비 | true |
+| Suntory Toki | 일본 | 블렌디드 | 43% | 0 | 2 | 4 | 1 | 2 | 1 | 1 | 쉬움 | 가성비 | true |
+| Hibiki Harmony | 일본 | 블렌디드 | 43% | 0 | 3 | 4 | 2 | 3 | 1 | 2 | 쉬움 | 일반 | true |
+| Macallan Double Cask 12 | 스코틀랜드 | 싱글몰트 | 40% | 0 | 4 | 3 | 3 | 3 | 2 | 2 | 쉬움 | 일반 | false |
+| Glenfarclas 12 | 스코틀랜드 | 싱글몰트 | 43% | 0 | 3 | 2 | 4 | 2 | 3 | 3 | 중간 | 일반 | false |
+| BenRiach The Twelve | 스코틀랜드 | 싱글몰트 | 43% | 0 | 3 | 4 | 2 | 3 | 2 | 2 | 쉬움 | 일반 | true |
+| Auchentoshan 12 | 스코틀랜드 | 싱글몰트 | 40% | 0 | 2 | 3 | 1 | 3 | 1 | 1 | 쉬움 | 가성비 | true |
+| Springbank 10 | 스코틀랜드 | 싱글몰트 | 46% | 2 | 2 | 3 | 1 | 1 | 2 | 3 | 중간 | 일반 | false |
+| Johnnie Walker Green Label 15 | 스코틀랜드 | 블렌디드몰트 | 43% | 3 | 2 | 3 | 1 | 2 | 2 | 3 | 중간 | 프리미엄 | false |
+| Kavalan Classic | 대만 | 싱글몰트 | 40% | 0 | 4 | 5 | 1 | 4 | 1 | 2 | 쉬움 | 일반 | true |
+| Yamazaki 12 | 일본 | 싱글몰트 | 43% | 0 | 3 | 4 | 2 | 3 | 2 | 2 | 쉬움 | 프리미엄 | true |
+| Nikka From The Barrel | 일본 | 블렌디드 | 51.4% | 1 | 3 | 3 | 2 | 2 | 3 | 4 | 중간 | 일반 | true |
+| Woodford Reserve | 미국 | 버번 | 43.2% | 0 | 4 | 2 | 2 | 4 | 3 | 3 | 쉬움 | 일반 | true |
+
+---
+
+## 7. 결과 화면 표시 내용
+
+| 항목 | 내용 예시 |
+| --- | --- |
+| 추천 위스키 | Macallan 12 Sherry Oak |
+| 매치율 | 86% |
+| 추천 이유 | "달콤한 디저트와 건과일/초콜릿류를 선호하는 당신의 취향은 셰리 캐스크 숙성 위스키의 묵직하고 진한 단맛과 잘 맞아요." (매칭된 상위 2개 향미 축을 자동 문장화) |
+| 향미 프로파일 | 레이더 차트 (Peat/Sweet/Fruit/Sherry/Vanilla/Spice/Body 7축, 0~5) |
+| 도수 | 40% |
+| 국가 | 스코틀랜드 (스페이사이드) |
+| 타입 | 싱글몰트 |
+| 입문 난이도 | ★☆☆ (쉬움) |
+| 가격대 | 프리미엄 (약 9~12만원대, 매장/시기에 따라 변동) |
+| 추천 안주 | 다크초콜릿, 견과류, 치즈 플래터, 건과일 |
+| 비슷한 위스키 | Balvenie 12 Doublewood, Dalmore 12 (2종, 향미 벡터 거리 2~3위) |
+| 한 줄 추천 | "달달하고 묵직한 첫 위스키를 원한다면, 무조건 여기서 시작하세요." |
+
+---
+
+## 8. 데이터베이스 설계 (Supabase)
+
+### 8-1. ERD
+
+```mermaid
+erDiagram
+    WHISKIES {
+        uuid id PK
+        text name
+        text name_kr
+        text country
+        text type
+        numeric abv
+        text price_tier
+        text difficulty_level
+        boolean highball_friendly
+        int flavor_peat
+        int flavor_sweet
+        int flavor_fruit
+        int flavor_sherry
+        int flavor_vanilla
+        int flavor_spice
+        int flavor_body
+        text pairing_food
+        text description
+        text one_liner
+        text image_url
+        timestamptz created_at
+    }
+    QUIZ_QUESTIONS {
+        uuid id PK
+        int order_no
+        text axis
+        text question_text
+        boolean is_active
+    }
+    QUIZ_OPTIONS {
+        uuid id PK
+        uuid question_id FK
+        int order_no
+        text option_text
+        jsonb axis_scores
+    }
+    QUIZ_RESULTS {
+        uuid id PK
+        jsonb answers
+        jsonb user_vector
+        uuid recommended_whisky_id FK
+        jsonb similar_whisky_ids
+        int match_rate
+        timestamptz created_at
+    }
+    QUIZ_QUESTIONS ||--o{ QUIZ_OPTIONS : "has"
+    QUIZ_RESULTS }o--|| WHISKIES : "recommends"
+```
+
+### 8-2. 테이블 명세
+
+**`whiskies`** — 위스키 마스터 데이터 (30종 시드 데이터 포함)
+
+| 컬럼 | 타입 | 제약 | 설명 |
+| --- | --- | --- | --- |
+| id | uuid | PK, default `gen_random_uuid()` | 고유 ID |
+| name | text | not null | 영문명 (예: Macallan 12 Sherry Oak) |
+| name_kr | text | not null | 국문명 |
+| country | text | not null | 생산 국가 |
+| type | text | not null | 싱글몰트/블렌디드/블렌디드몰트 |
+| abv | numeric(4,1) | not null | 도수(%) |
+| price_tier | text | not null, check in ('가성비','일반','프리미엄') | 가격대 |
+| difficulty_level | text | not null, check in ('쉬움','중간','도전') | 입문 난이도 |
+| highball_friendly | boolean | default false | 하이볼 적합 여부 |
+| flavor_peat | int | check 0~5 | 피트/스모키 점수 |
+| flavor_sweet | int | check 0~5 | 단맛 점수 |
+| flavor_fruit | int | check 0~5 | 과일향 점수 |
+| flavor_sherry | int | check 0~5 | 셰리/리치 점수 |
+| flavor_vanilla | int | check 0~5 | 바닐라/크림 점수 |
+| flavor_spice | int | check 0~5 | 스파이스 점수 |
+| flavor_body | int | check 0~5 | 바디감 점수 |
+| pairing_food | text | | 추천 안주 (콤마 구분) |
+| description | text | | 위스키 설명 |
+| one_liner | text | | 한 줄 추천 문구 |
+| image_url | text | | 이미지 URL |
+| created_at | timestamptz | default `now()` | 생성일 |
+
+**`quiz_questions`** — 질문 정의 (콘텐츠 운영 편의를 위해 DB화, 코드 재배포 없이 문구 수정 가능)
+
+| 컬럼 | 타입 | 제약 | 설명 |
+| --- | --- | --- | --- |
+| id | uuid | PK, default `gen_random_uuid()` | 고유 ID |
+| order_no | int | not null, unique | 노출 순서 (1~15) |
+| axis | text | not null | A~G 또는 experience/serving/budget/abv |
+| question_text | text | not null | 질문 문구 |
+| is_active | boolean | default true | 노출 여부 |
+
+**`quiz_options`** — 질문별 선택지 및 점수
+
+| 컬럼 | 타입 | 제약 | 설명 |
+| --- | --- | --- | --- |
+| id | uuid | PK, default `gen_random_uuid()` | 고유 ID |
+| question_id | uuid | FK → quiz_questions.id, not null | 소속 질문 |
+| order_no | int | not null | 선택지 노출 순서 |
+| option_text | text | not null | 선택지 문구 |
+| axis_scores | jsonb | not null | 예: `{"peat": 3}` 또는 `{"experience": "초급"}` |
+
+**`quiz_results`** — 사용자 응답/추천 결과 (익명 저장, 통계 및 공유 링크용)
+
+| 컬럼 | 타입 | 제약 | 설명 |
+| --- | --- | --- | --- |
+| id | uuid | PK, default `gen_random_uuid()` | 결과 공유 URL에 사용되는 ID |
+| answers | jsonb | not null | `[{question_id, option_id}, ...]` |
+| user_vector | jsonb | not null | 정규화된 사용자 향미 벡터 `{peat:.., sweet:..,...}` |
+| recommended_whisky_id | uuid | FK → whiskies.id, not null | 1위 추천 위스키 |
+| similar_whisky_ids | jsonb | not null | `[uuid, uuid]` 2~3위 |
+| match_rate | int | check 0~100 | 매치율(%) |
+| created_at | timestamptz | default `now()` | 생성일 (참여자 수 집계에 사용) |
+
+### 8-3. RLS 정책 (기존 프로젝트 컨벤션 준수)
+
+```sql
+alter table public.whiskies enable row level security;
+alter table public.quiz_questions enable row level security;
+alter table public.quiz_options enable row level security;
+alter table public.quiz_results enable row level security;
+
+-- 위스키/질문/선택지: 익명 사용자 조회만 허용 (콘텐츠는 관리자만 수정)
+create policy "Allow public read" on public.whiskies for select to anon using (true);
+create policy "Allow public read" on public.quiz_questions for select to anon using (true);
+create policy "Allow public read" on public.quiz_options for select to anon using (true);
+
+-- 결과: 익명 사용자 insert/select 허용 (로그인 없이 결과 저장 및 공유 링크 조회)
+create policy "Allow public insert" on public.quiz_results for insert to anon with check (true);
+create policy "Allow public read" on public.quiz_results for select to anon using (true);
+
+-- 참여자 수 실시간 카운터용
+alter publication supabase_realtime add table public.quiz_results;
+create index if not exists quiz_results_created_at_idx on public.quiz_results (created_at desc);
+```
+
+---
+
+## 9. API 설계
+
+| Method | Endpoint | 설명 | Request | Response |
+| --- | --- | --- | --- | --- |
+| GET | `/api/questions` | 활성화된 질문 15개 + 선택지 조회 | - | `{ questions: [{ id, order_no, axis, question_text, options: [{id, option_text, axis_scores}] }] }` |
+| POST | `/api/quiz/submit` | 답변 제출 → 벡터 계산/매칭/저장 | `{ answers: [{ question_id, option_id }] }` | `{ resultId, matchRate, recommendedWhiskyId }` |
+| GET | `/api/quiz/result/:resultId` | 결과 상세 조회 (결과 페이지용) | - | `{ recommendedWhisky: {...}, similarWhiskies: [{...}, {...}], matchRate, userVector, reason }` |
+| GET | `/api/whiskies` | 전체 위스키 목록 (내부/디버그용) | Query: `country`, `type` (optional) | `{ whiskies: [{...}] }` |
+| GET | `/api/whiskies/:id` | 위스키 상세 단건 조회 | - | `{ whisky: {...} }` |
+| GET | `/api/stats/participants` | 누적 테스트 완료 수 (Home 배너용) | - | `{ count: 12345 }` |
+
+**예시: `POST /api/quiz/submit` 응답**
+```json
+{
+  "resultId": "9f2a1c3e-...",
+  "matchRate": 86,
+  "recommendedWhiskyId": "b1a2..."
+}
+```
+
+> 매칭 알고리즘(6번 항목)은 서버(API Route)에서만 실행한다. 클라이언트는 답변만 전송하고, 위스키 향미 벡터 원본 데이터는 노출하지 않는다.
+
+---
+
+## 10. MVP 범위 (MoSCoW)
+
+### Must (반드시 있어야 함)
+- Home / Quiz(15문항) / Result 3개 화면
+- 15문항 질문-선택지 응답 및 진행 상태 표시
+- 서버 사이드 매칭 알고리즘(벡터 거리 계산 + 보정 필터)
+- 결과 화면: 추천 위스키, 추천 이유, 향미 프로파일, 도수/국가/가격대/난이도, 추천 안주, 비슷한 위스키 2종, 한 줄 추천
+- Supabase에 익명 결과 저장 및 공유 가능한 `resultId` URL
+- 반응형 웹 (모바일 퍼스트)
+- `[다시 테스트하기]` 버튼
+
+### Should (있으면 좋음, 초기 출시에 포함 권장)
+- 누적 참여자 수 실시간 배너 (기존 `useParticipantCount` 패턴 재사용)
+- 결과 링크 복사 공유 기능
+- 향미 프로파일 레이더 차트 시각화
+- 질문 로딩/전환 애니메이션(Framer Motion)
+
+### Could (여유 있으면)
+- 카카오톡 공유 API 연동
+- 이전 질문으로 돌아가 답변 수정
+- 다크모드
+- 예산 필터 결과 내 별도 표시(예: "가성비 위스키만 다시 보기")
+
+### Won't (이번 MVP 범위 제외)
+- 회원가입/로그인
+- 결제/구매 연동
+- AI(LLM) 기반 추천
+- 위스키 자체 검색/필터링 탐색 기능
+- 사용자 리뷰/평점 시스템
+- 관리자 CMS (질문/위스키 데이터는 SQL로 직접 관리)
+
+---
+
+## 11. 향후 확장 기능
+
+| 기능 | 설명 |
+| --- | --- |
+| AI 추천 고도화 | LLM을 활용해 추천 이유를 사용자 맞춤 문장으로 생성, 자연어 질문("나 오늘 이런 기분인데 뭐 마실까?") 지원 |
+| 음식 페어링 추천 | 사용자가 먹을 안주/음식을 입력하면 어울리는 위스키를 역으로 추천 |
+| 칵테일/하이볼 레시피 | 추천 위스키를 활용한 하이볼/칵테일 레시피 및 비율 가이드 제공 |
+| 구매 링크 연동 | 이마트, 와인나라 등 리테일러 제휴 링크 연결 (제휴 마케팅) |
+| 마이 위스키장 | 로그인 도입 후 마셔본/찜한 위스키 저장 기능 |
+| 취향 히스토리 | 재검사 시 이전 결과와 비교, 취향 변화 추적 |
+| 소셜 공유 강화 | 결과 카드 이미지 자동 생성(OG 이미지) 및 SNS 공유 최적화 |
+| 바 지도 연계 | 내 취향 위스키를 판매하는 근처 바/펍 지도 매칭 |
+| 위스키 검색/탐색 | 향미 축 필터로 전체 30종+ 위스키를 직접 탐색하는 카탈로그 페이지 |
+| 리뷰/평점 | 추천받은 위스키에 대한 사용자 피드백 수집 → 알고리즘 가중치 튜닝에 활용 |
