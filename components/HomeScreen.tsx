@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { ArrowRight, Sparkles } from "lucide-react";
 import ParticipantBanner from "@/components/ParticipantBanner";
+import { QUESTIONS } from "@/lib/questions";
 
 interface HomeScreenProps {
   count: number;
@@ -39,7 +40,7 @@ export default function HomeScreen({ count, onStart }: HomeScreenProps) {
       <p className="text-balance text-sm leading-relaxed text-slate-300 sm:text-base">
         피트, 셰리, 과일향, 바닐라, 스파이스까지.
         <br className="hidden sm:block" />
-        15개의 질문으로 내 입맛에 딱 맞는 위스키를 찾아보세요.
+        {QUESTIONS.length}개의 질문으로 내 입맛에 딱 맞는 위스키를 찾아보세요.
       </p>
 
       <ParticipantBanner count={count} />
@@ -55,7 +56,7 @@ export default function HomeScreen({ count, onStart }: HomeScreenProps) {
       </motion.button>
 
       <p className="text-xs text-slate-500">
-        15개의 질문 · 약 3분 소요 · 전문 지식 없이도 OK
+        {QUESTIONS.length}개의 질문 · 약 3분 소요 · 전문 지식 없이도 OK
       </p>
     </motion.div>
   );
