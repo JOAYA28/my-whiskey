@@ -24,7 +24,7 @@ export const QUESTIONS: Question[] = [
     options: [
       { id: "q2-1", text: "그 냄새가 좋아서 불 옆에 계속 앉아있는다", axisScores: { peat: 3 } },
       { id: "q2-2", text: "은은하게 남는 정도는 낭만있다", axisScores: { peat: 2 } },
-      { id: "q2-3", text: "신경 쓰지 않는다", axisScores: { peat: 1 } },
+      { id: "q2-3", text: "살짝 남아있는 정도는 괜찮다", axisScores: { peat: 1 } },
       { id: "q2-4", text: "냄새가 빠질 때까지 옷을 따로 세탁한다", axisScores: { peat: 0 } },
     ],
   },
@@ -72,7 +72,7 @@ export const QUESTIONS: Question[] = [
     options: [
       { id: "q6-1", text: "레몬/라임 같은 상큼한 시트러스 향", axisScores: { fruit: 3 } },
       { id: "q6-2", text: "복숭아, 사과 같은 과일 시럽 향", axisScores: { fruit: 2 } },
-      { id: "q6-3", text: "은은한 과일향이면 충분하다", axisScores: { fruit: 1 } },
+      { id: "q6-3", text: "과일향이 살짝만 있어도 좋다", axisScores: { fruit: 1 } },
       { id: "q6-4", text: "과일향보다 탄산의 청량감이 중요하다", axisScores: { fruit: 0 } },
     ],
   },
@@ -84,7 +84,7 @@ export const QUESTIONS: Question[] = [
     options: [
       { id: "q7-1", text: "진하고 묵직한 단맛, 최고로 좋아한다", axisScores: { sherry: 3 } },
       { id: "q7-2", text: "가끔 즐긴다", axisScores: { sherry: 2 } },
-      { id: "q7-3", text: "크게 좋아하지 않는다", axisScores: { sherry: 1 } },
+      { id: "q7-3", text: "있으면 먹지만 자주 찾지는 않는다", axisScores: { sherry: 1 } },
       { id: "q7-4", text: "전혀 안 먹는다", axisScores: { sherry: 0 } },
     ],
   },

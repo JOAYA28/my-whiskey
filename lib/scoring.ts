@@ -42,8 +42,29 @@ const AXIS_LABEL: Record<FlavorAxis, { user: string; whisky: string }> = {
   body: { user: "묵직하고 진한 음식", whisky: "묵직한 바디감" },
 };
 
-// 7축 모두 0~5 스케일이므로 이론상 최대 거리 = sqrt(7 * 5^2)
-const MAX_DISTANCE = Math.sqrt(FLAVOR_AXES.length * 5 * 5);
+// 피트/셰리처럼 호불호가 뚜렷하게 갈리는 축은 가중치를 더 줘서, 그 축이
+// 완벽히 일치할 때 다른 축의 사소한 차이에 밀리지 않도록 한다.
+const AXIS_WEIGHT: Record<FlavorAxis, number> = {
+  peat: 1.8,
+  sweet: 1.0,
+  fruit: 1.0,
+  sherry: 1.3,
+  vanilla: 1.0,
+  spice: 1.0,
+  body: 1.0,
+};
+
+// 사용자가 압도적으로 선호하는(1위와 2위 점수 차이가 뚜렷한) 축과 강하게
+// 일치하는 위스키에 주는 추가 보너스
+const DOMINANT_AXIS_THRESHOLD = 4;
+const DOMINANT_AXIS_MARGIN = 1.0;
+const DOMINANT_AXIS_BONUS = 1.5;
+const DOMINANT_AXIS_MATCH_THRESHOLD = 4;
+
+// 이론상 최대 거리 = sqrt(Σ weight * 5^2)
+const MAX_DISTANCE = Math.sqrt(
+  FLAVOR_AXES.reduce((sum, axis) => sum + AXIS_WEIGHT[axis] * 25, 0)
+);
 
 function findOption(answer: StoredAnswer) {
   const question = QUESTIONS.find((q) => q.id === answer.questionId);
@@ -87,15 +108,32 @@ export function extractMeta(answers: StoredAnswer[]): MetaScores {
   return meta;
 }
 
-function euclideanDistance(a: FlavorVector, b: FlavorVector): number {
+// 축별 가중치를 반영한 거리. 가중치가 클수록 그 축의 차이가 전체 거리에
+// 더 크게 반영된다.
+function weightedDistance(a: FlavorVector, b: FlavorVector): number {
   const sumSquares = FLAVOR_AXES.reduce((sum, axis) => {
     const diff = a[axis] - b[axis];
-    return sum + diff * diff;
+    return sum + AXIS_WEIGHT[axis] * diff * diff;
   }, 0);
   return Math.sqrt(sumSquares);
 }
 
-// Step 3. 보정 필터 적용 (경험수준/서빙방식/도수선호/예산)
+// 사용자 벡터에서 1위 축이 2위 축보다 뚜렷하게 높으면(=명확한 최애 취향이
+// 있으면) 그 축을 반환한다. 다 고만고만하면 null.
+function findDominantAxis(userVector: FlavorVector): FlavorAxis | null {
+  const sorted = [...FLAVOR_AXES].sort((a, b) => userVector[b] - userVector[a]);
+  const [top, runnerUp] = sorted;
+
+  if (
+    userVector[top] >= DOMINANT_AXIS_THRESHOLD &&
+    userVector[top] - userVector[runnerUp] >= DOMINANT_AXIS_MARGIN
+  ) {
+    return top;
+  }
+  return null;
+}
+
+// Step 3. 보정 필터 적용 (경험수준/서빙방식/도수선호 + 압도적 취향 보너스)
 function applyAdjustments(
   baseDistance: number,
   whisky: Whisky,
@@ -123,6 +161,11 @@ function applyAdjustments(
     distance += 0.5;
   }
 
+  const dominantAxis = findDominantAxis(userVector);
+  if (dominantAxis && whisky.flavor[dominantAxis] >= DOMINANT_AXIS_MATCH_THRESHOLD) {
+    distance -= DOMINANT_AXIS_BONUS;
+  }
+
   return Math.max(distance, 0);
 }
 
@@ -136,7 +179,7 @@ export function rankWhiskies(
   meta: MetaScores
 ): ScoredWhisky[] {
   return WHISKIES.map((whisky) => {
-    const baseDistance = euclideanDistance(userVector, whisky.flavor);
+    const baseDistance = weightedDistance(userVector, whisky.flavor);
     const distance = applyAdjustments(baseDistance, whisky, userVector, meta);
     return { whisky, distance, matchRate: toMatchRate(distance) };
   }).sort((a, b) => a.distance - b.distance);
