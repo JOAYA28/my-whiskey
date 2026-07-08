@@ -10,12 +10,10 @@ import LoadingScreen from "@/components/LoadingScreen";
 import ResultScreen from "@/components/ResultScreen";
 import { getRecommendation } from "@/lib/scoring";
 import { QUIZ_RESULTS_TABLE, supabase } from "@/lib/supabase";
-import { useParticipantCount } from "@/lib/useParticipantCount";
 import { QuizRecommendation, Stage, StoredAnswer } from "@/types";
 
 export default function WhiskyTestApp() {
   const searchParams = useSearchParams();
-  const { count } = useParticipantCount();
 
   const [stage, setStage] = useState<Stage>("home");
   const [recommendation, setRecommendation] = useState<QuizRecommendation | null>(null);
@@ -96,7 +94,7 @@ export default function WhiskyTestApp() {
       <div className="relative z-10 flex w-full flex-col items-center">
         <AnimatePresence mode="wait">
           {stage === "home" && (
-            <HomeScreen key="home" count={count} onStart={handleStart} />
+            <HomeScreen key="home" onStart={handleStart} />
           )}
           {stage === "quiz" && (
             <QuizScreen key="quiz" onComplete={handleQuizComplete} />

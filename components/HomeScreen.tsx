@@ -1,16 +1,15 @@
 "use client";
 
 import { motion } from "framer-motion";
+import Image from "next/image";
 import { ArrowRight, Sparkles } from "lucide-react";
-import ParticipantBanner from "@/components/ParticipantBanner";
 import { QUESTIONS } from "@/lib/questions";
 
 interface HomeScreenProps {
-  count: number;
   onStart: () => void;
 }
 
-export default function HomeScreen({ count, onStart }: HomeScreenProps) {
+export default function HomeScreen({ onStart }: HomeScreenProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -37,13 +36,27 @@ export default function HomeScreen({ count, onStart }: HomeScreenProps) {
         </span>
       </h1>
 
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15, duration: 0.4 }}
+        className="w-full overflow-hidden rounded-2xl border border-white/10 shadow-xl shadow-black/30"
+      >
+        <Image
+          src="/hero-find-my-whisky.png"
+          alt="Find My Whisky - Discover your perfect dream"
+          width={1264}
+          height={848}
+          priority
+          className="h-auto w-full"
+        />
+      </motion.div>
+
       <p className="text-balance text-sm leading-relaxed text-slate-300 sm:text-base">
         피트, 셰리, 과일향, 바닐라, 스파이스까지.
         <br className="hidden sm:block" />
         {QUESTIONS.length}개의 질문으로 내 입맛에 딱 맞는 위스키를 찾아보세요.
       </p>
-
-      <ParticipantBanner count={count} />
 
       <motion.button
         onClick={onStart}
