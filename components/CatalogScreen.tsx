@@ -8,9 +8,10 @@ import { WHISKY_CATEGORIES } from "@/lib/whiskyCategories";
 
 interface CatalogScreenProps {
   onBack: () => void;
+  onSelectWhisky: (whiskyId: string) => void;
 }
 
-export default function CatalogScreen({ onBack }: CatalogScreenProps) {
+export default function CatalogScreen({ onBack, onSelectWhisky }: CatalogScreenProps) {
   const [activeCategory, setActiveCategory] = useState(WHISKY_CATEGORIES[0].key);
 
   const category =
@@ -37,7 +38,7 @@ export default function CatalogScreen({ onBack }: CatalogScreenProps) {
           홈으로
         </motion.button>
         <h1 className="text-lg font-bold text-white sm:text-xl">
-          40종 위스키 모음
+          위스키 모아보기
         </h1>
       </div>
 
@@ -65,9 +66,11 @@ export default function CatalogScreen({ onBack }: CatalogScreenProps) {
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {filtered.map((whisky) => (
-          <div
+          <button
             key={whisky.id}
-            className="flex flex-col gap-2 rounded-2xl border border-white/10 bg-white/5 p-4 shadow-lg"
+            type="button"
+            onClick={() => onSelectWhisky(whisky.id)}
+            className="flex flex-col gap-2 rounded-2xl border border-white/10 bg-white/5 p-4 text-left shadow-lg transition-colors hover:border-sky-400/40 hover:bg-sky-500/10"
           >
             <div className="flex items-start justify-between gap-2">
               <div>
@@ -95,7 +98,7 @@ export default function CatalogScreen({ onBack }: CatalogScreenProps) {
               <span>{whisky.difficulty}</span>
               <span>${whisky.priceUsd}</span>
             </div>
-          </div>
+          </button>
         ))}
       </div>
     </motion.div>

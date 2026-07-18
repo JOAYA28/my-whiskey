@@ -76,7 +76,7 @@ export default function HomeScreen({ onStart, onOpenCatalog }: HomeScreenProps) 
         className="flex w-full items-center justify-center gap-2 rounded-2xl border border-sky-400/30 bg-sky-500/10 px-8 py-3.5 text-sm font-bold text-sky-200 transition-all hover:bg-sky-500/20"
       >
         <LayoutGrid className="h-4 w-4" />
-        40종류 위스키 모음(기제)
+        위스키 모아보기
       </motion.button>
 
       <p className="text-xs text-slate-500">

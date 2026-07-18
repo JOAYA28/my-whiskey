@@ -196,6 +196,18 @@ function buildReason(userVector: FlavorVector, whisky: Whisky): string {
   return `${userPhrase}를 선호하는 당신의 취향은, ${whiskyPhrase}이 도드라지는 ${whisky.nameKr}와 잘 맞아요.`;
 }
 
+// 카탈로그의 위스키 개별 페이지용: 특정 위스키와 향미가 가장 비슷한 다른
+// 위스키를 찾는다(사용자 취향과 무관하게, 위스키 벡터끼리의 거리만 비교).
+export function getSimilarWhiskies(whisky: Whisky, count = 2): ScoredWhisky[] {
+  return WHISKIES.filter((candidate) => candidate.id !== whisky.id)
+    .map((candidate) => {
+      const distance = weightedDistance(whisky.flavor, candidate.flavor);
+      return { whisky: candidate, distance, matchRate: toMatchRate(distance) };
+    })
+    .sort((a, b) => a.distance - b.distance)
+    .slice(0, count);
+}
+
 export function getRecommendation(answers: StoredAnswer[]): QuizRecommendation {
   const userVector = buildUserVector(answers);
   const meta = extractMeta(answers);

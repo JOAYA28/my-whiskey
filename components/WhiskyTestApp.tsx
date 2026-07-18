@@ -9,16 +9,19 @@ import HomeScreen from "@/components/HomeScreen";
 import QuizScreen from "@/components/QuizScreen";
 import LoadingScreen from "@/components/LoadingScreen";
 import ResultScreen from "@/components/ResultScreen";
+import WhiskyDetailScreen from "@/components/WhiskyDetailScreen";
 import { getRecommendation } from "@/lib/scoring";
 import { decodeAnswers, encodeAnswers } from "@/lib/shareLink";
 import { QUIZ_RESULTS_TABLE, supabase } from "@/lib/supabase";
-import { QuizRecommendation, Stage, StoredAnswer } from "@/types";
+import { getWhiskyById } from "@/lib/whisky-data";
+import { QuizRecommendation, Stage, StoredAnswer, Whisky } from "@/types";
 
 export default function WhiskyTestApp() {
   const searchParams = useSearchParams();
 
   const [stage, setStage] = useState<Stage>("home");
   const [recommendation, setRecommendation] = useState<QuizRecommendation | null>(null);
+  const [selectedWhisky, setSelectedWhisky] = useState<Whisky | null>(null);
 
   // 공유된 결과 링크(예: ?a=<encoded>)로 진입한 경우, URL에 인코딩된 답변으로
   // 결과를 다시 계산한다. 추천 알고리즘은 answers만으로 결정되는 순수 함수라서
@@ -34,6 +37,19 @@ export default function WhiskyTestApp() {
     setStage("result");
   }, [searchParams]);
 
+  // 위스키 개별 링크(예: ?w=<whiskyId>)로 진입한 경우, 해당 위스키 상세 화면을
+  // 바로 보여준다.
+  useEffect(() => {
+    const whiskyId = searchParams.get("w");
+    if (!whiskyId) return;
+
+    const whisky = getWhiskyById(whiskyId);
+    if (!whisky) return;
+
+    setSelectedWhisky(whisky);
+    setStage("whiskyDetail");
+  }, [searchParams]);
+
   const handleStart = useCallback(() => {
     setStage("quiz");
   }, []);
@@ -44,6 +60,26 @@ export default function WhiskyTestApp() {
 
   const handleCloseCatalog = useCallback(() => {
     setStage("home");
+  }, []);
+
+  const handleSelectWhisky = useCallback((whiskyId: string) => {
+    const whisky = getWhiskyById(whiskyId);
+    if (!whisky) return;
+
+    setSelectedWhisky(whisky);
+    setStage("whiskyDetail");
+
+    const url = new URL(window.location.href);
+    url.searchParams.set("w", whiskyId);
+    window.history.replaceState({}, "", url);
+  }, []);
+
+  const handleBackToCatalog = useCallback(() => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("w");
+    window.history.replaceState({}, "", url);
+    setSelectedWhisky(null);
+    setStage("catalog");
   }, []);
 
   const handleQuizComplete = useCallback((answers: StoredAnswer[]) => {
@@ -84,6 +120,7 @@ export default function WhiskyTestApp() {
     url.search = "";
     window.history.replaceState({}, "", url);
     setRecommendation(null);
+    setSelectedWhisky(null);
     setStage("home");
   }, []);
 
@@ -103,7 +140,18 @@ export default function WhiskyTestApp() {
             <QuizScreen key="quiz" onComplete={handleQuizComplete} />
           )}
           {stage === "catalog" && (
-            <CatalogScreen key="catalog" onBack={handleCloseCatalog} />
+            <CatalogScreen
+              key="catalog"
+              onBack={handleCloseCatalog}
+              onSelectWhisky={handleSelectWhisky}
+            />
+          )}
+          {stage === "whiskyDetail" && selectedWhisky && (
+            <WhiskyDetailScreen
+              key="whiskyDetail"
+              whisky={selectedWhisky}
+              onBack={handleBackToCatalog}
+            />
           )}
           {stage === "loading" && (
             <LoadingScreen key="loading" onDone={handleLoadingDone} />

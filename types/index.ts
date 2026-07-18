@@ -74,4 +74,10 @@ export interface QuizRecommendation {
   reason: string;
 }
 
-export type Stage = "home" | "quiz" | "loading" | "result" | "catalog";
+export type Stage =
+  | "home"
+  | "quiz"
+  | "loading"
+  | "result"
+  | "catalog"
+  | "whiskyDetail";
