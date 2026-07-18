@@ -50,8 +50,8 @@ export interface Whisky {
   country: string;
   type: string;
   abv: number;
-  /** 국내 면세점 기준 1병당 참고 가격(원). 실제 가격은 매장/시기에 따라 달라질 수 있다. */
-  priceKrw: number;
+  /** 국내 면세점(신라/롯데/신세계) 1병당 참고 가격(달러). 실제 가격은 매장/시기/재고에 따라 달라질 수 있다. */
+  priceUsd: number;
   difficulty: DifficultyLevel;
   highballFriendly: boolean;
   flavor: FlavorVector;

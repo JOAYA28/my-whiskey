@@ -82,7 +82,7 @@ export default function ResultScreen({ recommendation, onRestart }: ResultScreen
         <InfoBadge
           icon={<Wine className="h-4 w-4" />}
           label="가격대"
-          value={`${whisky.priceKrw.toLocaleString()}원`}
+          value={`$${whisky.priceUsd.toLocaleString()}`}
           caption="면세점 기준"
         />
       </div>
