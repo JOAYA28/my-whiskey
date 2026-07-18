@@ -2,14 +2,15 @@
 
 import { motion } from "framer-motion";
 import Image from "next/image";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight, LayoutGrid, Sparkles } from "lucide-react";
 import { QUESTIONS } from "@/lib/questions";
 
 interface HomeScreenProps {
   onStart: () => void;
+  onOpenCatalog: () => void;
 }
 
-export default function HomeScreen({ onStart }: HomeScreenProps) {
+export default function HomeScreen({ onStart, onOpenCatalog }: HomeScreenProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -66,6 +67,16 @@ export default function HomeScreen({ onStart }: HomeScreenProps) {
       >
         내 위스키 찾으러 가기
         <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
+      </motion.button>
+
+      <motion.button
+        onClick={onOpenCatalog}
+        whileHover={{ scale: 1.03 }}
+        whileTap={{ scale: 0.97 }}
+        className="flex w-full items-center justify-center gap-2 rounded-2xl border border-sky-400/30 bg-sky-500/10 px-8 py-3.5 text-sm font-bold text-sky-200 transition-all hover:bg-sky-500/20"
+      >
+        <LayoutGrid className="h-4 w-4" />
+        40종류 위스키 모음(기제)
       </motion.button>
 
       <p className="text-xs text-slate-500">

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { AnimatePresence } from "framer-motion";
 import AnimatedBackground from "@/components/AnimatedBackground";
+import CatalogScreen from "@/components/CatalogScreen";
 import HomeScreen from "@/components/HomeScreen";
 import QuizScreen from "@/components/QuizScreen";
 import LoadingScreen from "@/components/LoadingScreen";
@@ -35,6 +36,14 @@ export default function WhiskyTestApp() {
 
   const handleStart = useCallback(() => {
     setStage("quiz");
+  }, []);
+
+  const handleOpenCatalog = useCallback(() => {
+    setStage("catalog");
+  }, []);
+
+  const handleCloseCatalog = useCallback(() => {
+    setStage("home");
   }, []);
 
   const handleQuizComplete = useCallback((answers: StoredAnswer[]) => {
@@ -84,10 +93,17 @@ export default function WhiskyTestApp() {
       <div className="relative z-10 flex w-full flex-col items-center">
         <AnimatePresence mode="wait">
           {stage === "home" && (
-            <HomeScreen key="home" onStart={handleStart} />
+            <HomeScreen
+              key="home"
+              onStart={handleStart}
+              onOpenCatalog={handleOpenCatalog}
+            />
           )}
           {stage === "quiz" && (
             <QuizScreen key="quiz" onComplete={handleQuizComplete} />
+          )}
+          {stage === "catalog" && (
+            <CatalogScreen key="catalog" onBack={handleCloseCatalog} />
           )}
           {stage === "loading" && (
             <LoadingScreen key="loading" onDone={handleLoadingDone} />
