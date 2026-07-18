@@ -11,13 +11,11 @@ export type FlavorVector = Record<FlavorAxis, number>;
 
 export type ExperienceLevel = "초급" | "중급" | "상급";
 export type ServingStyle = "하이볼" | "온더락" | "스트레이트" | "미정";
-export type BudgetTier = "가성비" | "일반" | "프리미엄";
 export type DifficultyLevel = "쉬움" | "중간" | "도전";
 
 export interface MetaScores {
   experience?: ExperienceLevel;
   serving?: ServingStyle;
-  budget?: BudgetTier;
 }
 
 // 질문은 두 종류로 나뉜다.
@@ -52,7 +50,8 @@ export interface Whisky {
   country: string;
   type: string;
   abv: number;
-  priceTier: BudgetTier;
+  /** 국내 면세점 기준 1병당 참고 가격(원). 실제 가격은 매장/시기에 따라 달라질 수 있다. */
+  priceKrw: number;
   difficulty: DifficultyLevel;
   highballFriendly: boolean;
   flavor: FlavorVector;

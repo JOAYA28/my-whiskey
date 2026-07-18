@@ -79,7 +79,12 @@ export default function ResultScreen({ recommendation, onRestart }: ResultScreen
         <InfoBadge icon={<Percent className="h-4 w-4" />} label="도수" value={`${whisky.abv}%`} />
         <InfoBadge icon={<MapPin className="h-4 w-4" />} label="국가" value={whisky.country} />
         <InfoBadge icon={<Gauge className="h-4 w-4" />} label="입문 난이도" value={whisky.difficulty} />
-        <InfoBadge icon={<Wine className="h-4 w-4" />} label="가격대" value={whisky.priceTier} />
+        <InfoBadge
+          icon={<Wine className="h-4 w-4" />}
+          label="가격대"
+          value={`${whisky.priceKrw.toLocaleString()}원`}
+          caption="면세점 기준"
+        />
       </div>
 
       <div className="rounded-2xl border border-white/10 bg-white/5 p-6 shadow-xl backdrop-blur-sm">
@@ -156,16 +161,19 @@ function InfoBadge({
   icon,
   label,
   value,
+  caption,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
+  caption?: string;
 }) {
   return (
     <div className="flex flex-col items-center gap-1 rounded-2xl border border-white/10 bg-white/5 px-3 py-4 text-center shadow-lg">
       <span className="text-amber-300">{icon}</span>
       <span className="text-[11px] text-slate-400">{label}</span>
       <span className="text-sm font-bold text-white">{value}</span>
+      {caption && <span className="text-[10px] text-slate-500">{caption}</span>}
     </div>
   );
 }

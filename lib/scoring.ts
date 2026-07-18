@@ -22,14 +22,15 @@ export const FLAVOR_AXES: FlavorAxis[] = [
 ];
 
 // 각 축의 질문별 최대 원점수 합 (정규화 분모)
+// 질문당 5지선다(4~0점)로, 축당 질문 2개는 최대 8점, 1개는 최대 4점이다.
 const AXIS_MAX_RAW: Record<FlavorAxis, number> = {
-  peat: 6,
-  sweet: 6,
-  fruit: 6,
-  sherry: 3,
-  vanilla: 3,
-  spice: 3,
-  body: 6,
+  peat: 8,
+  sweet: 8,
+  fruit: 8,
+  sherry: 4,
+  vanilla: 4,
+  spice: 4,
+  body: 8,
 };
 
 const AXIS_LABEL: Record<FlavorAxis, { user: string; whisky: string }> = {
@@ -151,9 +152,6 @@ function applyAdjustments(
   if (meta.serving === "스트레이트" && whisky.flavor.body >= 3) {
     distance -= 0.5;
   }
-  if (meta.budget === "가성비" && whisky.priceTier === "프리미엄") {
-    distance += 0.5;
-  }
 
   const dominantAxis = findDominantAxis(userVector);
   if (dominantAxis && whisky.flavor[dominantAxis] >= DOMINANT_AXIS_MATCH_THRESHOLD) {
@@ -179,10 +177,17 @@ export function rankWhiskies(
   }).sort((a, b) => a.distance - b.distance);
 }
 
-// 사용자 벡터에서 가장 두드러진 상위 2개 축을 골라 추천 이유 문장을 생성한다.
+// 사용자 취향과 위스키의 실제 향미가 "둘 다 강한" 축을 골라 추천 이유 문장을
+// 생성한다. 사용자 벡터만 보고 축을 고르면(과거 방식), 위스키가 실제로는
+// 약한 축인데도 강조하는 오류가 생길 수 있어(예: 피트=0인 위스키인데
+// "피트가 도드라진다"고 설명) 두 벡터의 최솟값(min)으로 겹치는 축만 고른다.
 function buildReason(userVector: FlavorVector, whisky: Whisky): string {
   const topAxes = [...FLAVOR_AXES]
-    .sort((a, b) => userVector[b] - userVector[a])
+    .sort(
+      (a, b) =>
+        Math.min(userVector[b], whisky.flavor[b]) -
+        Math.min(userVector[a], whisky.flavor[a])
+    )
     .slice(0, 2);
 
   const userPhrase = topAxes.map((axis) => AXIS_LABEL[axis].user).join("과 ");
